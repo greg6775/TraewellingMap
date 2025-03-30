@@ -1,0 +1,87 @@
+<html>
+
+<head>
+    <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.js"></script>
+</head>
+
+<body>
+    <div id="mapDiv"></div>
+
+    <script>
+        const tokenID = "eyJraWQiOiJSMzc0WTJSNzM3IiwidHlwIjoiSldUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJIODU2M1U2NDNCIiwiaWF0IjoxNzQzMzQ4ODc1LCJleHAiOjE3NDQwMDkxOTl9.Z7DwpefiK8qrmFQa11FgAy-kQ5NqWeE708spB7ZW5ATZHsXxnYWB64Wf_LlJXOKskkcXLSEFspZaKIklsCDINg";
+
+        mapkit.init({
+            authorizationCallback: function (done) {
+                done(tokenID);
+            }
+        });
+
+        const coordinate = new mapkit.Coordinate(51, 10) // latitude, longitude
+        const span = new mapkit.CoordinateSpan(20, 20)
+        const region = new mapkit.CoordinateRegion(coordinate, span);
+
+        const map = new mapkit.Map("mapDiv", {
+            region
+        });
+
+        function fetchPolylines(
+            page = 1,
+            previousResponse = []
+        ) {
+            return fetch(`https://traewelling.de/api/v1/user/greg/statuses?page=${page}`)
+                .then(x => x.json())
+                .then(res => {
+                    const response = [ ...previousResponse, ...res.data ];
+
+                    if (res.data.length !== 0) {
+                        page++;
+
+                        return fetchPolylines(page, response);
+                    }
+
+                    return response;
+                });
+        }
+
+        async function showPolylines() {
+            console.log("executed")
+
+            const req = await fetchPolylines()
+            for (const status of req) {
+                const poly = await fetch(`https://traewelling.de/api/v1/polyline/${status.id}`, {
+                    headers: {
+                        "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiZWE3M2UxNzkwOWIzYWQ2ZDIxOWFkNzliYTkxMGJiNjBmODcxOTY4ZWYxYjkwMDYzZTZkYWY4OGMxNzM3ODdhNzYzODNlNTU2YjYxMGU0YjQiLCJpYXQiOjE3NDA0MjczNDMuMjU1NzYyLCJuYmYiOjE3NDA0MjczNDMuMjU1NzY0LCJleHAiOjE3NzE5NjMzNDMuMjU0MDQ3LCJzdWIiOiIyNDU2MDI1Iiwic2NvcGVzIjpbIioiXX0.YupM898arN396Vw6-OCCTgaE_RDh6Z6p-ABa_rbp0NZj28ovfw1gai5VDeQu00jakU9VYH4T7I3By2r80jd2xReEJlh4RDvtOzuEiz5G8ihZYF6a6cs91m9BWeWMdvdL1R2Z_-bKXBm_g6mUEwG6IXAIjLvtlStsBHcQMlFa2HcrrpMeJc8U1bOnrmPQUjSZ-MyN44wUBXEHUdzBTRQeyWAXc87zyiNXbp-ZdYbgZdE7Rz3m_eulCIjy5ArpWPE_ucfsMMBjOq0eS8x8bq0hRCrG6oAjBX6XtyjIgI5i8PzE77cVEaEmQlRkGn0Tkeoi1CQzOIE3VbaSmNwtsNwdpS4avnIHmWolee_bXmRYWW0FjOjk5FyGX9UqJDFM0-NrPqvJjpJDpJGZsmuLVPg-8l1fehRS16npfG1tRZ2wwR1L-T1nNKySPHrzlGKJiS-Ncp88LwC5lHSNj6168PQ3YCYKZBms-mmOVZ4J2CCkQTEZru6J5DzGlq-Zoq_BreFlNnqRbWfwDmtTlW8gDfsk5aIwnAQh1lZUYHCKHfy1o0HxGNzLzGUvvpkVEeRHN5_TgIHUN7lQqnWl-tKYojmzty7R10y7AZhU4WeTopKgk1brvj2ysf1j0aboTSpeVNVYOXdjSIMYrdswyE6aVdQe_DR_FR5SF91Ad8QCGXitpOY"
+                    }
+                }).then(x => x.json())
+                console.log(poly)
+                if (poly.data.features.length == 0) {
+                    console.log("No polyline found")
+                    continue
+                }
+                const points = poly.data.features[ 0 ].geometry.coordinates
+
+                console.log(points)
+                var coords = points.map(function (point) {
+                    return new mapkit.Coordinate(point[ 1 ], point[ 0 ]);
+                });
+
+                console.log(coords)
+
+                var style = new mapkit.Style({
+                    lineWidth: 2,
+                    lineJoin: "round",
+                    //lineDash: [ 8, 4 ],
+                    strokeColor: "#F0F"
+                });
+
+
+                var polyline = new mapkit.PolylineOverlay(coords, { style });
+                map.addOverlay(polyline);
+            }
+        }
+    </script>
+
+    <button onclick="showPolylines()">Show polylines</button>
+</body>
+
+</html>
