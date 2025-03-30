@@ -5,6 +5,10 @@
 </head>
 
 <body>
+    <div style="position:absolute;z-index: 69;">
+        <input type="text" id="username" placeholder="Username" />
+        <button onclick="showPolylines()">Fetch Polylines</button>
+    </div>
     <div id="mapDiv"></div>
 
     <script>
@@ -44,8 +48,6 @@
         }
 
         async function showPolylines() {
-            console.log("executed")
-
             const req = await fetchPolylines()
             for (const status of req) {
                 const poly = await fetch(`https://traewelling.de/api/v1/polyline/${status.id}`, {
@@ -59,13 +61,9 @@
                     continue
                 }
                 const points = poly.data.features[ 0 ].geometry.coordinates
-
-                console.log(points)
                 var coords = points.map(function (point) {
                     return new mapkit.Coordinate(point[ 1 ], point[ 0 ]);
                 });
-
-                console.log(coords)
 
                 var style = new mapkit.Style({
                     lineWidth: 2,
@@ -80,8 +78,6 @@
             }
         }
     </script>
-
-    <button onclick="showPolylines()">Show polylines</button>
 </body>
 
 </html>
