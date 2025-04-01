@@ -8,6 +8,8 @@
     <div style="position:absolute;z-index: 69;">
         <input type="text" id="username" placeholder="Username" />
         <input type="text" id="accessToken" placeholder="Access Token (optional)" />
+        <input type="date" id="startDate" placeholder="Start Date (optional)" />
+        <input type="date" id="endDate" placeholder="End Date (optional)" />
         <button onclick="showPolylines()">Fetch Polylines</button>
         <div id="status"></div>
     </div>
@@ -17,6 +19,7 @@
         const statusElem = document.getElementById("status")
         const tokenID = "eyJraWQiOiJSMzc0WTJSNzM3IiwidHlwIjoiSldUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJIODU2M1U2NDNCIiwiaWF0IjoxNzQzMzQ4ODc1LCJleHAiOjE3NDQwMDkxOTl9.Z7DwpefiK8qrmFQa11FgAy-kQ5NqWeE708spB7ZW5ATZHsXxnYWB64Wf_LlJXOKskkcXLSEFspZaKIklsCDINg";
 
+        let map = null;
         function initMapKit() {
             mapkit.init({
                 authorizationCallback: function (done) {
@@ -28,7 +31,7 @@
             const span = new mapkit.CoordinateSpan(20, 20)
             const region = new mapkit.CoordinateRegion(coordinate, span); // Europe with DE centered
 
-            const map = new mapkit.Map("mapDiv", {
+            map = new mapkit.Map("mapDiv", {
                 region
             });
         }
@@ -64,42 +67,87 @@
         }
 
         async function showPolylines() {
-            if (!username.value) {
-                alert("Enter a name, mf")
-                return
-            }
             statusElem.innerText = "Fetching Statuses"
-            const statuses = await fetchStatuses()
-            const length = statuses.length
-            for (var i = 0; i < statuses.length; i += 30) {
-                const chunk = statuses.slice(i, i + 30);
-                rl++
-                statusElem.innerText = "Fetching Polyline " + i + "/" + length
-                if (rl == 61) {
-                    statusElem.innerText = "Sleeping to avoid ratelimit " + i + "/" + length
-                    await new Promise(r => setTimeout(r, 61000));
-                    rl = 0
+            if (startDate.value) {
+                if (!accessToken.value) {
+                    alert("You need to enter an access token to fetch dates")
+                    return
                 }
-                const poly = await fetch(`https://traewelling.de/api/v1/polyline/${chunk.map(x => x.id).join(",")}`, accessToken.value ? {
-                    headers: {
-                        Authorization: "Bearer " + accessToken.value
+                const parsedEndDate = endDate.value ? new Date(endDate.value) : new Date();
+                const parsedStartDate = new Date(startDate.value);
+                parsedStartDate.setHours(0, 0, 0, 0);
+                parsedEndDate.setHours(0, 0, 0, 0);
+
+                const dates = [];
+
+                for (
+                    let d = new Date(parsedStartDate);
+                    d <= parsedEndDate;
+                    d.setDate(d.getDate() + 1)
+                ) {
+                    const localDate = d.toLocaleDateString('de')
+                    dates.push(localDate);
+                }
+                dates.forEach(async x => {
+                    const journal = await fetch("https://traewelling.de/api/v1/statistics/daily/" + x + "?withPolylines=true", {
+                        headers: {
+                            Authorization: "Bearer " + accessToken.value
+                        }
+                    }).then(x => x.json())
+
+                    for (const feature of journal.data.polylines.features) {
+                        const points = feature.geometry.coordinates
+                        var coords = points.map(function (point) {
+                            return new mapkit.Coordinate(point[ 1 ], point[ 0 ]);
+                        });
+
+                        var style = new mapkit.Style({
+                            lineWidth: 2,
+                            lineJoin: "round",
+                            strokeColor: "#F0F"
+                        });
+
+                        var polyline = new mapkit.PolylineOverlay(coords, { style });
+                        map.addOverlay(polyline);
                     }
-                } : {}).then(x => x.json())
-                for (const feature of poly.data.features) {
-                    const points = feature.geometry.coordinates
-                    var coords = points.map(function (point) {
-                        return new mapkit.Coordinate(point[ 1 ], point[ 0 ]);
-                    });
+                })
+            } else {
+                if (!username.value) {
+                    alert("Enter a name, mf")
+                    return
+                }
+                const statuses = await fetchStatuses()
+                const length = statuses.length
+                for (var i = 0; i < statuses.length; i += 30) {
+                    const chunk = statuses.slice(i, i + 30);
+                    rl++
+                    statusElem.innerText = "Fetching Polyline " + i + "/" + length
+                    if (rl == 61) {
+                        statusElem.innerText = "Sleeping to avoid ratelimit " + i + "/" + length
+                        await new Promise(r => setTimeout(r, 61000));
+                        rl = 0
+                    }
+                    const poly = await fetch(`https://traewelling.de/api/v1/polyline/${chunk.map(x => x.id).join(",")}`, accessToken.value ? {
+                        headers: {
+                            Authorization: "Bearer " + accessToken.value
+                        }
+                    } : {}).then(x => x.json())
+                    for (const feature of poly.data.features) {
+                        const points = feature.geometry.coordinates
+                        var coords = points.map(function (point) {
+                            return new mapkit.Coordinate(point[ 1 ], point[ 0 ]);
+                        });
 
-                    var style = new mapkit.Style({
-                        lineWidth: 2,
-                        lineJoin: "round",
-                        strokeColor: "#F0F"
-                    });
+                        var style = new mapkit.Style({
+                            lineWidth: 2,
+                            lineJoin: "round",
+                            strokeColor: "#F0F"
+                        });
 
 
-                    var polyline = new mapkit.PolylineOverlay(coords, { style });
-                    map.addOverlay(polyline);
+                        var polyline = new mapkit.PolylineOverlay(coords, { style });
+                        map.addOverlay(polyline);
+                    }
                 }
             }
             statusElem.innerText = "Finished fetching"
