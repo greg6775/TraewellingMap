@@ -1,7 +1,7 @@
 <html>
 
 <head>
-    <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.core.js" data-libraries="full-map,services"></script>
+    <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.core.js" crossorigin async data-callback="initMapKit" data-libraries="full-map,services"></script>
 </head>
 
 <body>
@@ -17,19 +17,21 @@
         const statusElem = document.getElementById("status")
         const tokenID = "eyJraWQiOiJSMzc0WTJSNzM3IiwidHlwIjoiSldUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJIODU2M1U2NDNCIiwiaWF0IjoxNzQzMzQ4ODc1LCJleHAiOjE3NDQwMDkxOTl9.Z7DwpefiK8qrmFQa11FgAy-kQ5NqWeE708spB7ZW5ATZHsXxnYWB64Wf_LlJXOKskkcXLSEFspZaKIklsCDINg";
 
-        mapkit.init({
-            authorizationCallback: function (done) {
-                done(tokenID);
-            }
-        });
+        function initMapKit() {
+            mapkit.init({
+                authorizationCallback: function (done) {
+                    done(tokenID);
+                }
+            });
 
-        const coordinate = new mapkit.Coordinate(51, 10) // latitude, longitude
-        const span = new mapkit.CoordinateSpan(20, 20)
-        const region = new mapkit.CoordinateRegion(coordinate, span); // Europe with DE centered
+            const coordinate = new mapkit.Coordinate(51, 10) // latitude, longitude
+            const span = new mapkit.CoordinateSpan(20, 20)
+            const region = new mapkit.CoordinateRegion(coordinate, span); // Europe with DE centered
 
-        const map = new mapkit.Map("mapDiv", {
-            region
-        });
+            const map = new mapkit.Map("mapDiv", {
+                region
+            });
+        }
 
         statusElem.innerText = "MapKit loaded"
 
