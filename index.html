@@ -1,12 +1,13 @@
 <html>
 
 <head>
-    <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.core.js" data-libraries="full-map"></script>
+    <script src="https://cdn.apple-mapkit.com/mk/5.x.x/mapkit.core.js" data-libraries="full-map,services"></script>
 </head>
 
 <body>
     <div style="position:absolute;z-index: 69;">
         <input type="text" id="username" placeholder="Username" />
+        <input type="text" id="accessToken" placeholder="Access Token (optional)" />
         <button onclick="showPolylines()">Fetch Polylines</button>
         <div id="status"></div>
     </div>
@@ -24,7 +25,7 @@
 
         const coordinate = new mapkit.Coordinate(51, 10) // latitude, longitude
         const span = new mapkit.CoordinateSpan(20, 20)
-        const region = new mapkit.CoordinateRegion(coordinate, span);
+        const region = new mapkit.CoordinateRegion(coordinate, span); // Europe with DE centered
 
         const map = new mapkit.Map("mapDiv", {
             region
@@ -41,11 +42,11 @@
                 await new Promise(r => setTimeout(r, 61000));
                 rl = 0
             }
-            return fetch(`https://traewelling.de/api/v1/user/greg/statuses?page=${page}`, {
+            return fetch(`https://traewelling.de/api/v1/user/${username.value}/statuses?page=${page}`, accessToken.value ? {
                 headers: {
-                    "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiZWE3M2UxNzkwOWIzYWQ2ZDIxOWFkNzliYTkxMGJiNjBmODcxOTY4ZWYxYjkwMDYzZTZkYWY4OGMxNzM3ODdhNzYzODNlNTU2YjYxMGU0YjQiLCJpYXQiOjE3NDA0MjczNDMuMjU1NzYyLCJuYmYiOjE3NDA0MjczNDMuMjU1NzY0LCJleHAiOjE3NzE5NjMzNDMuMjU0MDQ3LCJzdWIiOiIyNDU2MDI1Iiwic2NvcGVzIjpbIioiXX0.YupM898arN396Vw6-OCCTgaE_RDh6Z6p-ABa_rbp0NZj28ovfw1gai5VDeQu00jakU9VYH4T7I3By2r80jd2xReEJlh4RDvtOzuEiz5G8ihZYF6a6cs91m9BWeWMdvdL1R2Z_-bKXBm_g6mUEwG6IXAIjLvtlStsBHcQMlFa2HcrrpMeJc8U1bOnrmPQUjSZ-MyN44wUBXEHUdzBTRQeyWAXc87zyiNXbp-ZdYbgZdE7Rz3m_eulCIjy5ArpWPE_ucfsMMBjOq0eS8x8bq0hRCrG6oAjBX6XtyjIgI5i8PzE77cVEaEmQlRkGn0Tkeoi1CQzOIE3VbaSmNwtsNwdpS4avnIHmWolee_bXmRYWW0FjOjk5FyGX9UqJDFM0-NrPqvJjpJDpJGZsmuLVPg-8l1fehRS16npfG1tRZ2wwR1L-T1nNKySPHrzlGKJiS-Ncp88LwC5lHSNj6168PQ3YCYKZBms-mmOVZ4J2CCkQTEZru6J5DzGlq-Zoq_BreFlNnqRbWfwDmtTlW8gDfsk5aIwnAQh1lZUYHCKHfy1o0HxGNzLzGUvvpkVEeRHN5_TgIHUN7lQqnWl-tKYojmzty7R10y7AZhU4WeTopKgk1brvj2ysf1j0aboTSpeVNVYOXdjSIMYrdswyE6aVdQe_DR_FR5SF91Ad8QCGXitpOY"
+                    Authorization: "Bearer " + accessToken.value
                 }
-            })
+            } : {})
                 .then(x => x.json())
                 .then(res => {
                     const response = [ ...previousResponse, ...res.data ];
@@ -61,6 +62,10 @@
         }
 
         async function showPolylines() {
+            if (!username.value) {
+                alert("Enter a name, mf")
+                return
+            }
             statusElem.innerText = "Fetching Statuses"
             const statuses = await fetchStatuses()
             const length = statuses.length
@@ -73,11 +78,11 @@
                     await new Promise(r => setTimeout(r, 61000));
                     rl = 0
                 }
-                const poly = await fetch(`https://traewelling.de/api/v1/polyline/${chunk.map(x => x.id).join(",")}`, {
+                const poly = await fetch(`https://traewelling.de/api/v1/polyline/${chunk.map(x => x.id).join(",")}`, accessToken.value ? {
                     headers: {
-                        "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiZWE3M2UxNzkwOWIzYWQ2ZDIxOWFkNzliYTkxMGJiNjBmODcxOTY4ZWYxYjkwMDYzZTZkYWY4OGMxNzM3ODdhNzYzODNlNTU2YjYxMGU0YjQiLCJpYXQiOjE3NDA0MjczNDMuMjU1NzYyLCJuYmYiOjE3NDA0MjczNDMuMjU1NzY0LCJleHAiOjE3NzE5NjMzNDMuMjU0MDQ3LCJzdWIiOiIyNDU2MDI1Iiwic2NvcGVzIjpbIioiXX0.YupM898arN396Vw6-OCCTgaE_RDh6Z6p-ABa_rbp0NZj28ovfw1gai5VDeQu00jakU9VYH4T7I3By2r80jd2xReEJlh4RDvtOzuEiz5G8ihZYF6a6cs91m9BWeWMdvdL1R2Z_-bKXBm_g6mUEwG6IXAIjLvtlStsBHcQMlFa2HcrrpMeJc8U1bOnrmPQUjSZ-MyN44wUBXEHUdzBTRQeyWAXc87zyiNXbp-ZdYbgZdE7Rz3m_eulCIjy5ArpWPE_ucfsMMBjOq0eS8x8bq0hRCrG6oAjBX6XtyjIgI5i8PzE77cVEaEmQlRkGn0Tkeoi1CQzOIE3VbaSmNwtsNwdpS4avnIHmWolee_bXmRYWW0FjOjk5FyGX9UqJDFM0-NrPqvJjpJDpJGZsmuLVPg-8l1fehRS16npfG1tRZ2wwR1L-T1nNKySPHrzlGKJiS-Ncp88LwC5lHSNj6168PQ3YCYKZBms-mmOVZ4J2CCkQTEZru6J5DzGlq-Zoq_BreFlNnqRbWfwDmtTlW8gDfsk5aIwnAQh1lZUYHCKHfy1o0HxGNzLzGUvvpkVEeRHN5_TgIHUN7lQqnWl-tKYojmzty7R10y7AZhU4WeTopKgk1brvj2ysf1j0aboTSpeVNVYOXdjSIMYrdswyE6aVdQe_DR_FR5SF91Ad8QCGXitpOY"
+                        Authorization: "Bearer " + accessToken.value
                     }
-                }).then(x => x.json())
+                } : {}).then(x => x.json())
                 for (const feature of poly.data.features) {
                     const points = feature.geometry.coordinates
                     var coords = points.map(function (point) {
